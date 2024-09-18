@@ -1,36 +1,32 @@
 # should probably make all this into a class
-
 import string
 import random
 
-# from grid import print_single_grid
+from grid import print_single_grid
 from helper_function import letter_to_number, number_to_letter
+from specifications import *
 # Available SHIPS:
 # 1 x Destroyer (2 spaces)
 # 1 x Submarine (3 spaces)
 # 1 x Cruiser (3 spaces)
 # 1 x Battleship (4 spaces)
 # 1 x Carrier (5 spaces)
-SHIPS = {"Destroyer": 2, "Submarine": 3, "Cruiser": 3, "Battleship": 4, "Carrier": 5} # dictionary of SHIPS and their lengths
-DIRECTIONS = ['U', 'D', 'R', 'L'] # up, down, right, left 
-ROWS = 10
-COLS = 10
-column_labels = string.ascii_uppercase[:COLS]
-name = "Hector"
   
 def setup():
-
     print("SETTING UP SHIPS...")
-    grid_computer = setup_robot(SHIPS, grid_computer)
+    grid_computer, ships_computer = setup_robot()
     print("The computer has setup its SHIPS. Now it's you turn.\n")
-    # print_single_grid(ROWS, COLS, 'COMPUTER', grid_computer)
-    grid_human = setup_human(SHIPS)
+    grid_human, ships_human = setup_human()
+    print("Congratulation you have finished setting up your ships.")
+    print("STARTING GAME...")
+    return grid_human, grid_computer, ships_human, ships_computer
 
 def setup_robot():
     grid_computer = {}
     for col in column_labels:
         for row in range(1, ROWS+1):
             grid_computer[f'{col}{row}'] = None
+    ships_computer = {}
 
     for ship, length in SHIPS.items():
         bow = random.choice(list(grid_computer.keys()))
@@ -40,9 +36,10 @@ def setup_robot():
             direction = random.choice(DIRECTIONS)
             if check_space(bow, direction, length, grid_computer):
                 break
-        grid_computer, _ = add_ship(grid_computer, ship, bow, direction, length)
+        grid_computer, list_of_keys = add_ship(grid_computer, ship, bow, direction, length)
+        ships_computer[ship] = set(list_of_keys)
 
-    return grid_computer
+    return grid_computer, ships_computer
 
 def setup_human():
     grid_human = {}
@@ -50,9 +47,10 @@ def setup_human():
         for row in range(1, ROWS+1):
             grid_human[f'{col}{row}'] = None
 
-    print_single_grid(ROWS, COLS, name, grid_human)
+    print_single_grid("You", grid_human)
     print("You will place your SHIPS by first typing the square the bow (front of the ship) will be in.")
     print("For example, type 'B2' to place the bow of your ship on B2\n")
+    ships_human = {}
     for ship, length in SHIPS.items():
         bow = input(f"Now, where would you like to place your {ship.upper()} (length {length})? ")
         i = 1
@@ -60,7 +58,7 @@ def setup_human():
         while not bow in grid_human.keys() or grid_human[bow] != None or not space_exits:
             # show the board again so player remembers where they have placed the SHIPS
             if i % 3 == 0:
-                print_single_grid(ROWS, COLS, name)
+                print_single_grid("You", grid_human)
             if bow not in grid_human.keys():
                 print()
                 print("Please enter a valid square")
@@ -86,7 +84,7 @@ def setup_human():
         j = 1
         while direction not in DIRECTIONS or not check_direction(grid_human, bow, direction, length):
             if j % 3 == 0:
-                print_single_grid(ROWS, COLS, name)
+                print_single_grid("You", grid_human)
             if direction not in DIRECTIONS:
                 print("Please enter a valid direction...")
                 direction = input(f"In which direction would like to place your {ship.upper()}? ('U', 'D', 'R', 'L') ")
@@ -98,9 +96,10 @@ def setup_human():
         print()
         grid_human, list_of_keys = add_ship(grid_human, ship, bow, direction, length)
         print(f'Perfect! Placing {ship.upper()} on {list_of_keys}')
-        print_single_grid(ROWS, COLS, name, grid_human)
+        ships_human[ship] = set(list_of_keys)
+        print_single_grid("You", grid_human)
 
-    return grid_human
+    return grid_human, ships_human
 
 
 
@@ -193,5 +192,3 @@ def add_ship_left(grid_computer, ship, bow, length):
         grid_computer[f'{number_to_letter(letter_to_number(bow[0])-i)}{bow[1:]}'] = ship
         list_of_keys += [f'{number_to_letter(letter_to_number(bow[0])+i)}{bow[1:]}']
     return grid_computer, list_of_keys
-
-grid_computer = setup_robot()
