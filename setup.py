@@ -4,6 +4,7 @@ import string
 import random
 
 from grid import print_grid, name
+from helper_function import letter_to_number, number_to_letter
 # Available Ships:
 # 1 x Destroyer (2 spaces)
 # 1 x Submarine (3 spaces)
@@ -28,8 +29,8 @@ def setup(ships):
     print("SETTING UP SHIPS...")
     grid_computer = setup_robot(ships, grid_computer)
     print("The computer has setup its ships. Now it's you turn.\n")
+    # print_grid(ROWS, COLS, 'COMPUTER', grid_computer)
     setup_human(ships, grid_human)
-    # print(grid_computer)
 
 def setup_robot(ships, grid_computer):
     for ship, length in ships.items():
@@ -40,113 +41,152 @@ def setup_robot(ships, grid_computer):
             direction = random.choice(directions)
             if check_space(bow, direction, length, grid_computer):
                 break
-        grid_computer = add_ship(grid_computer, ship, bow, direction, length)
+        grid_computer, _ = add_ship(grid_computer, ship, bow, direction, length)
 
     return grid_computer
 
 def setup_human(ships, grid_human):
+    print_grid(ROWS, COLS, name, grid_human)
     print("You will place your ships by first typing the square the bow (front of the ship) will be in.")
     print("For example, type 'B2' to place the bow of your ship on B2\n")
     for ship, length in ships.items():
-        bow = input(f"Where would you like to place your {ship.upper()}? ")
+        bow = input(f"Now, where would you like to place your {ship.upper()} (length {length})? ")
         i = 1
-        while not bow in grid_human.keys():
-            print("Please enter a valid square...")
-            bow = input(f"Where would you like to place your {ship.upper()}? ")
+        space_exits = False
+        while not bow in grid_human.keys() or grid_human[bow] != None or not space_exits:
             # show the board again so player remembers where they have placed the ships
             if i % 3 == 0:
                 print_grid(ROWS, COLS, name)
+            if bow not in grid_human.keys():
+                print()
+                print("Please enter a valid square")
+            elif grid_human[bow] != None:
+                print()
+                print("That square is already occupied")
+            elif not space_exits:
+                for direction in directions:
+                    if check_direction(grid_human, bow, direction, length): #instead of constantly checking directions save direction check result in a variable
+                        space_exits = True
+                        break
+                # could there be an issue with an infinte loop because a ship can't fit anywhere?
+                if space_exits == False:
+                    print(f"There is no space for {ship.upper()} here in any direction")
+                else:
+                    break
+            bow = input(f"Where would you like to place your {ship.upper()} (length {length})? ")
+            i += 1
         print(f"Perfect! {bow} it is!")
-        direction = input(f"In which direction would like to place your {ship.upper()}? ('U', 'D', 'R', 'L') ")
+        print()
+        # make list of directions and remove the ones for which there is no space left
+        direction = input(f"In which direction would like to place your {ship.upper()} (length {length})? ('U', 'D', 'R', 'L') ")
         j = 1
-        while not direction in directions:
-            print("Please enter a valid direction...")
-            direction = input(f"In which direction would like to place your {ship.upper()}? ('U', 'D', 'R', 'L') ")
+        while direction not in directions or not check_direction(grid_human, bow, direction, length):
             if j % 3 == 0:
                 print_grid(ROWS, COLS, name)
+            if direction not in directions:
+                print("Please enter a valid direction...")
+                direction = input(f"In which direction would like to place your {ship.upper()}? ('U', 'D', 'R', 'L') ")
+            if not check_direction(grid_human, bow, direction, length):
+                print("There is no space in that direction")
+                # should be able to remove directions in which there is no space
+                direction = input(f"In which direction would like to place your {ship.upper()}? ('U', 'D', 'R', 'L') ")
+            j += 1
+        print()
+        grid_human, list_of_keys = add_ship(grid_human, ship, bow, direction, length)
+        print(f'Perfect! Placing {ship.upper()} on {list_of_keys}')
+        print_grid(ROWS, COLS, name, grid_human)
 
 
 
         
 
-def check_space(bow, direction, length_of_ship, grid_computer):
-    if grid_computer[bow] != None:
-        # return "Ship already exists"
+def check_space(bow, direction, length_of_ship, grid):
+    return check_bow(grid, bow) and check_direction(grid, bow, direction, length_of_ship)
+    
+def check_bow(grid, bow):
+    if grid[bow] != None:
+        # square already occupied
         return False
+    else:
+        return True
+    
+def check_direction(grid, bow, direction, length):
     if direction == 'U':
-        if int(bow[1:]) - length_of_ship < 0:
+        if int(bow[1:]) - length < 0:
             # return "Out of bounds"
             return False
-        for i in range(1, length_of_ship-1):
-            if grid_computer[f'{bow[0]}{int(bow[1:])-i}'] is None:
+        for i in range(1, length):
+            if grid[f'{bow[0]}{int(bow[1:])-i}'] is None:
                 continue
                 # return "Space already occupied"
             return False
         return True
     elif direction == 'D':
-        if int(bow[1:]) + length_of_ship > (ROWS + 1):
+        if int(bow[1:]) + length > (ROWS + 1):
             # return "Out of bounds"
             return False
-        for i in range(1, length_of_ship-1):
-            if grid_computer[f'{bow[0]}{int(bow[1:])+i}'] is None:
+        for i in range(1, length):
+            if grid[f'{bow[0]}{int(bow[1:])+i}'] is None:
                 continue
                 # return "Space already occupied"
             return False
         return True
     elif direction == 'R':
-        if letter_to_number(bow[0]) + length_of_ship > (COLS + 1):
+        if letter_to_number(bow[0]) + length > (COLS + 1):
             # return "Out of bounds"
             return False
-        for i in range(1, length_of_ship-1):
-            if grid_computer[f'{number_to_letter(letter_to_number(bow[0])+i)}{bow[1:]}'] is None:
+        for i in range(1, length):
+            if grid[f'{number_to_letter(letter_to_number(bow[0])+i)}{bow[1:]}'] is None:
                 continue
                 # return "Space already occupied"
             return False
         return True
     elif direction == 'L':
-        if letter_to_number(bow[0]) - length_of_ship < 0:
+        if letter_to_number(bow[0]) - length < 0:
             # return "Out of bounds"
             return False
-        for i in range(1, length_of_ship-1):
-            if grid_computer[f'{number_to_letter(letter_to_number(bow[0])-i)}{bow[1:]}'] is None:
+        for i in range(1, length):
+            if grid[f'{number_to_letter(letter_to_number(bow[0])-i)}{bow[1:]}'] is None:
                 continue
                 # return "Space already occupied"
             return False
         return True
 
-def add_ship(grid_computer, ship, bow, direction, length):
+def add_ship(grid, ship, bow, direction, length):
     if direction == 'U':
-        add_ship_up(grid_computer, ship, bow, length)
+        grid, list_of_keys = add_ship_up(grid, ship, bow, length)
     if direction == 'D':
-        add_ship_down(grid_computer, ship, bow, length)
+        grid, list_of_keys = add_ship_down(grid, ship, bow, length)
     if direction == 'R':
-        add_ship_right(grid_computer, ship, bow, length)
+        grid, list_of_keys = add_ship_right(grid, ship, bow, length)
     if direction == 'L':
-        add_ship_left(grid_computer, ship, bow, length)
-    return grid_computer
+        grid, list_of_keys = add_ship_left(grid, ship, bow, length)
+    return grid, list_of_keys
 
 def add_ship_up(grid_computer, ship, bow, length):
-    for i in range(length):
-        grid_computer[f'{bow[0]}{int(bow[1:])+i}'] = ship
-    return grid_computer
-def add_ship_down(grid_computer, ship, bow, length):
+    list_of_keys = []
     for i in range(length):
         grid_computer[f'{bow[0]}{int(bow[1:])-i}'] = ship
-    return grid_computer
+        list_of_keys += [f'{bow[0]}{int(bow[1:])-i}']
+    return grid_computer, list_of_keys
+def add_ship_down(grid_computer, ship, bow, length):
+    list_of_keys = []
+    for i in range(length):
+        grid_computer[f'{bow[0]}{int(bow[1:])+i}'] = ship
+        list_of_keys += [f'{bow[0]}{int(bow[1:])+i}']
+    return grid_computer, list_of_keys
 def add_ship_right(grid_computer, ship, bow, length):
+    list_of_keys = []
     for i in range(length):
         grid_computer[f'{number_to_letter(letter_to_number(bow[0])+i)}{bow[1:]}'] = ship
-    return grid_computer
+        list_of_keys += [f'{number_to_letter(letter_to_number(bow[0])+i)}{bow[1:]}']
+    return grid_computer, list_of_keys
 def add_ship_left(grid_computer, ship, bow, length):
+    list_of_keys = []
     for i in range(length):
         grid_computer[f'{number_to_letter(letter_to_number(bow[0])-i)}{bow[1:]}'] = ship
-    return grid_computer
-
-def letter_to_number(letter):
-    return ord(letter) - ord('A') + 1
-
-def number_to_letter(number):
-    return chr(ord('A') + number - 1)
+        list_of_keys += [f'{number_to_letter(letter_to_number(bow[0])+i)}{bow[1:]}']
+    return grid_computer, list_of_keys
 
 
 
